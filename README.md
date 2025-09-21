@@ -62,12 +62,20 @@ If you want live feedback in the form (status auto-switching before save):
     Place your JS logic in js/status-preview.js.
 
 
+## Example: Attaching the JavaScript Library via `hook_form_alter`
+
+Add the following code to your `activity_status_enforcer.module` file:
+
+```php
 <?php
 
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
 function activity_status_enforcer_form_log_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
-  // Für spezifische Bundles filtern, z. B. 'activity'.
+  // Filter for specific bundles, e.g. 'activity'.
   if (!empty($form['#bundle']) && $form['#bundle'] === 'activity') {
     $form['#attached']['library'][] = 'activity_status_enforcer/status_preview';
   }
