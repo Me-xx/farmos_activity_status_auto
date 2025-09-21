@@ -1,0 +1,9 @@
+threshold_minutes: 10
+log_bundles:
+  - activity
+date_fields:
+  - field_date            # ISO-Date-Feld (date + time)
+  - timestamp             # Unix-Timestamp-Feld (fallback)
+pending_value: 'pending'
+done_value: 'done'
+status_field: 'moderation_state'  # oder z. B. 'field_status'
