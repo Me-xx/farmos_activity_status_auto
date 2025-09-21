@@ -1,0 +1,88 @@
+<?php
+/*
+Hinweis: Passe status_field, pending_value und done_value an deinen konkreten Log-Typ an. In farmOS kann es statt moderation_state auch ein eigenes Status-Feld geben.
+*/
+use Drupal\Core\Entity\EntityInterface;
+
+/**
+ * Implements hook_entity_presave().
+ */
+function activity_status_enforcer_entity_presave(EntityInterface $entity) {
+  // Nur Logs behandeln.
+  if ($entity->getEntityTypeId() !== 'log') {
+    return;
+  }
+
+  // Konfiguration / Defaults.
+  $config = \Drupal::config('activity_status_enforcer.settings');
+  $threshold = (int) ($config->get('threshold_minutes') ?? 10);
+  $bundles = $config->get('log_bundles') ?? ['activity'];
+  $dateFields = $config->get('date_fields') ?? ['field_date', 'timestamp'];
+  $statusFields = $config->get('status_fields') ?? ['field_status', 'moderation_state'];
+  $pending = $config->get('pending_value') ?? 'pending';
+  $done = $config->get('done_value') ?? 'done';
+  $auto = $config->get('auto_value') ?? 'auto';
+
+  // Nur bestimmte Bundles.
+  if (!in_array($entity->bundle(), $bundles, TRUE)) {
+    return;
+  }
+
+  // Datum/Zeit extrahieren.
+  $selectedTimestamp = NULL;
+  foreach ($dateFields as $fieldName) {
+    if (!$entity->hasField($fieldName) || $entity->get($fieldName)->isEmpty()) {
+      continue;
+    }
+
+    $value = $entity->get($fieldName)->value ?? NULL;
+
+    // Unix-Timestamp.
+    if (is_numeric($value)) {
+      $selectedTimestamp = (int) $value;
+      break;
+    }
+
+    // ISO-String.
+    if (is_string($value) && !empty($value)) {
+      $ts = strtotime($value);
+      if ($ts !== FALSE) {
+        $selectedTimestamp = $ts;
+        break;
+      }
+    }
+  }
+
+  if ($selectedTimestamp === NULL) {
+    return;
+  }
+
+  $now = \Drupal::time()->getRequestTime();
+  $diffMinutes = ($selectedTimestamp - $now) / 60;
+
+  // Statusfelder prüfen.
+  foreach ($statusFields as $statusField) {
+    if (!$entity->hasField($statusField) || $entity->get($statusField)->isEmpty()) {
+      continue;
+    }
+
+    $current = $entity->get($statusField)->value;
+
+    // Nur überschreiben, wenn "auto".
+    if ($current === $auto) {
+      if ($diffMinutes > $threshold) {
+        $entity->set($statusField, $pending);
+      } else {
+        $entity->set($statusField, $done);
+      }
+    }
+  }
+}
+
+function activity_status_enforcer_form_log_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  if (!empty($form['#bundle']) && $form['#bundle'] === 'activity') {
+    if (isset($form['field_status'])) {
+      $form['field_status']['widget'][0]['value']['#default_value'] = 'auto';
+    }
+  }
+}

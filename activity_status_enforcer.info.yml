@@ -1,0 +1,6 @@
+name: 'Activity Status Enforcer'
+type: module
+description: 'Erzwingt Pending/Done anhand zukünftiger Datumswerte.'
+core_version_requirement: ^10
+package: Custom
+version: 1.0

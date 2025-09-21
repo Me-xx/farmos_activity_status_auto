@@ -1,0 +1,7 @@
+status_preview:
+  version: 1.x
+  js:
+    js/status-preview.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
